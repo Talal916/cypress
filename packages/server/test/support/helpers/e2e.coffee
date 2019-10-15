@@ -287,6 +287,7 @@ module.exports = e2e = {
 
   options: (ctx, options = {}) ->
     _.defaults(options, {
+      browser: 'electron'
       project: e2ePath
       timeout: if options.exit is false then 3000000 else 120000
       originalTitle: null
@@ -375,7 +376,7 @@ module.exports = e2e = {
   exec: (ctx, options = {}) ->
     ## if the current test wasn't meant to run in the current browser, skip it
     if (b = process.env.BROWSER) and b isnt options.browser
-      console.log("The current test is meant to run in #{options.browser}, but BROWSER env var = #{b}. Skipping...")
+      console.log("The current test is meant to run in #{options.browser}, but process.env.BROWSER == '#{b}'. Skipping...")
       return ctx.skip()
 
     options = @options(ctx, options)
