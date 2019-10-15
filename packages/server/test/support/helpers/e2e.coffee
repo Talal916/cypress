@@ -1,6 +1,7 @@
 require("../../spec_helper")
 
 _            = require("lodash")
+chalk        = require("chalk")
 cp           = require("child_process")
 niv          = require("npm-install-version")
 path         = require("path")
@@ -199,6 +200,17 @@ localItFn = (title, options = {}) ->
   .each(runTestInEachBrowser)
   .value()
 
+runParentAfterEach = (ctx) ->
+  Promise.map ctx._runnable.parent._afterEach, (afterEachHook) ->
+    { fn } = afterEachHook
+
+    fn = fn.bind(ctx)
+
+    if fn.length == 1
+      return Promise.fromCallback fn
+
+    return fn()
+
 ## eslint-ignore-next-line
 localItFn.only = (title, options) ->
   options.only = true
@@ -374,13 +386,15 @@ module.exports = e2e = {
         expect(process.exit).to.be.calledWith(code)
 
   exec: (ctx, options = {}) ->
-    ## if the current test wasn't meant to run in the current browser, skip it
-    if (b = process.env.BROWSER) and b isnt options.browser
-      console.log("The current test is meant to run in #{options.browser}, but process.env.BROWSER == '#{b}'. Skipping...")
-      return ctx.skip()
-
     options = @options(ctx, options)
     args    = @args(options)
+
+    ## if the current test wasn't meant to run in the current browser, skip it
+    if (b = process.env.BROWSER) and b isnt options.browser
+      console.log(chalk.cyan("This test is meant to run in #{chalk.green(options.browser)}, but process.env.BROWSER == '#{chalk.green(b)}'. Skipping..."))
+
+      return runParentAfterEach(ctx).then ->
+        ctx.skip()
 
     args = ["index.js"].concat(args)
 
