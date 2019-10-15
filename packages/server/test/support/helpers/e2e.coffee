@@ -200,16 +200,19 @@ localItFn = (title, options = {}) ->
   .each(runTestInEachBrowser)
   .value()
 
-runParentAfterEach = (ctx) ->
-  Promise.map ctx._runnable.parent._afterEach, (afterEachHook) ->
+runAfterEach = (runnable) ->
+  Promise.map runnable._afterEach || [], (afterEachHook) ->
     { fn } = afterEachHook
 
-    fn = fn.bind(ctx)
+    fn = fn.bind(runnable)
 
     if fn.length == 1
       return Promise.fromCallback fn
 
     return fn()
+  .then ->
+    if runnable.parent
+      runAfterEach(runnable.parent)
 
 ## eslint-ignore-next-line
 localItFn.only = (title, options) ->
@@ -391,9 +394,9 @@ module.exports = e2e = {
 
     ## if the current test wasn't meant to run in the current browser, skip it
     if (b = process.env.BROWSER) and b isnt options.browser
-      console.log(chalk.cyan("This test is meant to run in #{chalk.green(options.browser)}, but process.env.BROWSER == '#{chalk.green(b)}'. Skipping..."))
+      console.log(chalk.cyan("This test is meant to run in #{chalk.green(options.browser)}, but process.env.BROWSER is #{chalk.green(b)}. Skipping..."))
 
-      return runParentAfterEach(ctx).then ->
+      return runAfterEach(ctx._runnable).then ->
         ctx.skip()
 
     args = ["index.js"].concat(args)
